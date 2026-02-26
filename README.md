@@ -40,6 +40,26 @@
 python main_window.py
 ```
 
+## تحويل المشروع إلى ملف EXE
+
+يمكنك تحويل المشروع إلى ملف تنفيذي (.exe) مستقل باستخدام مكتبة `pyinstaller`. اتبع الخطوات التالية:
+
+1. تثبيت pyinstaller:
+   ```bash
+   pip install pyinstaller
+   ```
+
+2. تشغيل أمر التحويل:
+   ```bash
+   pyinstaller --noconsole --onefile --name "AutoLeads" main_window.py
+   ```
+
+- `--noconsole`: لإخفاء نافذة الـ Command Prompt عند تشغيل البرنامج.
+- `--onefile`: لجمع كافة الملفات في ملف .exe واحد.
+- `--name`: لتحديد اسم الملف الناتج.
+
+بعد انتهاء الأمر، ستجد الملف الناتج داخل مجلد باسم `dist`.
+
 ## المعمارية
 
 - `main_window.py`: يحتوي على منطق الواجهة الرسومية.
