@@ -11,6 +11,10 @@ class DatabaseManager:
     def _get_connection(self):
         return sqlite3.connect(self.db_path)
 
+    def _sanitize_sql_name(self, name):
+        """Sanitizes names for use as table or column identifiers in SQL."""
+        return str(name).replace('[', '').replace(']', '').replace('"', '')
+
     def _initialize_db(self):
         """Initializes the basic tables if they don't exist."""
         with self._get_connection() as conn:
@@ -39,12 +43,14 @@ class DatabaseManager:
 
     def add_column(self, table_name, column_name, column_type="TEXT"):
         """Adds a new column to a table if it doesn't already exist."""
+        table_name = self._sanitize_sql_name(table_name)
+        column_name = self._sanitize_sql_name(column_name)
         try:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(f"PRAGMA table_info([{table_name}])")
                 columns = [info[1] for info in cursor.fetchall()]
-                
+
                 if column_name not in columns:
                     cursor.execute(f"ALTER TABLE [{table_name}] ADD COLUMN [{column_name}] {column_type}")
                     conn.commit()
@@ -70,7 +76,7 @@ class DatabaseManager:
         # Ensure all columns exist in the 'leads' table
         for key in sanitized_data.keys():
             self.add_column("leads", key)
-        
+
         # Add metadata
         if "import_date" not in sanitized_data:
             sanitized_data["import_date"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -78,7 +84,7 @@ class DatabaseManager:
         keys = list(sanitized_data.keys())
         placeholders = ", ".join(["?"] * len(keys))
         columns = ", ".join([f"[{k}]" for k in keys])
-        
+
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(f"INSERT INTO leads ({columns}) VALUES ({placeholders})", list(sanitized_data.values()))
@@ -91,7 +97,7 @@ class DatabaseManager:
             data_dict["contact_date"] = datetime.now().strftime("%Y-%m-%d")
         if "contact_time" not in data_dict:
             data_dict["contact_time"] = datetime.now().strftime("%H:%M:%S")
-        
+
         data_dict["lead_id"] = lead_id
 
         # Ensure all columns exist in 'interactions'
@@ -101,7 +107,7 @@ class DatabaseManager:
         keys = list(data_dict.keys())
         placeholders = ", ".join(["?"] * len(keys))
         columns = ", ".join([f"[{k}]" for k in keys])
-        
+
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(f"INSERT INTO interactions ({columns}) VALUES ({placeholders})", list(data_dict.values()))
@@ -110,18 +116,21 @@ class DatabaseManager:
 
     def delete_record(self, table_name, record_id):
         """Deletes a record from any table by ID."""
+        table_name = self._sanitize_sql_name(table_name)
         with self._get_connection() as conn:
             cursor = conn.cursor()
             # If deleting from leads, also delete interactions
             if table_name.lower() == "leads":
                 cursor.execute("DELETE FROM interactions WHERE lead_id = ?", (record_id,))
-            
+
             cursor.execute(f"DELETE FROM [{table_name}] WHERE id = ?", (record_id,))
             conn.commit()
             return True
 
     def update_record(self, table_name, record_id, col_name, new_value):
         """Updates a specific field of a record in any table."""
+        table_name = self._sanitize_sql_name(table_name)
+        col_name = self._sanitize_sql_name(col_name)
         with self._get_connection() as conn:
             cursor = conn.cursor()
             query = f"UPDATE [{table_name}] SET [{col_name}] = ? WHERE id = ?"
@@ -129,12 +138,22 @@ class DatabaseManager:
             conn.commit()
             return True
 
-    def fetch_all_leads(self):
-        """Returns all leads as a list of dictionaries."""
+    def fetch_all_leads(self, search_term=None):
+        """Returns all leads as a list of dictionaries, optionally filtered by search_term."""
         with self._get_connection() as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM leads ORDER BY id DESC")
+
+            if search_term:
+                cursor.execute("PRAGMA table_info(leads)")
+                columns = [info[1] for info in cursor.fetchall()]
+                conditions = " OR ".join([f"[{col}] LIKE ?" for col in columns])
+                query = f"SELECT * FROM leads WHERE {conditions} ORDER BY id DESC"
+                params = [f"%{search_term}%"] * len(columns)
+                cursor.execute(query, params)
+            else:
+                cursor.execute("SELECT * FROM leads ORDER BY id DESC")
+
             rows = cursor.fetchall()
             return [dict(row) for row in rows]
 
@@ -147,6 +166,7 @@ class DatabaseManager:
 
     def get_table_data(self, table_name):
         """Returns all data from a specific table."""
+        table_name = self._sanitize_sql_name(table_name)
         with self._get_connection() as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
@@ -157,7 +177,7 @@ class DatabaseManager:
     def get_interaction_report(self, start_date=None, end_date=None):
         """Returns interactions joined with lead details, filtered by date."""
         query = """
-            SELECT i.*, l.* 
+            SELECT i.*, l.*
             FROM interactions i
             JOIN leads l ON i.lead_id = l.id
         """
@@ -171,13 +191,13 @@ class DatabaseManager:
         elif end_date:
             query += " WHERE i.contact_date <= ?"
             params = [end_date]
-            
+
         with self._get_connection() as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             cursor.execute(query, params)
             rows = cursor.fetchall()
-            # Clean up duplicate 'id' and 'lead_id' columns from JOIN if necessary, 
+            # Clean up duplicate 'id' and 'lead_id' columns from JOIN if necessary,
             # but usually it's fine for Excel
             return [dict(row) for row in rows]
 
@@ -186,6 +206,6 @@ if __name__ == "__main__":
     db = DatabaseManager("test_leads.db")
     lead_id = db.insert_lead({"full_name": "Test User", "phone": "123456", "custom_field": "Val"})
     print(f"Inserted lead ID: {lead_id}")
-    db.add_interaction(lead_id, "Called", "No answer")
+    db.add_interaction(lead_id, {"result": "Called", "notes": "No answer"})
     print("Leads:", db.fetch_all_leads())
     print("Tables:", db.get_table_names())
