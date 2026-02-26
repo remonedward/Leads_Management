@@ -488,8 +488,6 @@ class MainWindow(QMainWindow):
 
     def load_leads(self, search_term=None):
         self.leads_table.blockSignals(True)
-
-        # Use current search text if no term is provided
         if search_term is None and hasattr(self, 'search_input'):
             search_term = self.search_input.text()
 
@@ -543,7 +541,6 @@ class MainWindow(QMainWindow):
             self.load_leads()
 
     def filter_leads(self, text):
-        # Database-side search for better performance with large datasets
         self.load_leads(text)
 
 if __name__ == "__main__":

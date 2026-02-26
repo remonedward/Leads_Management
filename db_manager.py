@@ -13,8 +13,6 @@ class DatabaseManager:
 
     def _sanitize_sql_name(self, name):
         """Sanitizes names for use as table or column identifiers in SQL."""
-        # SQLite escapes [ and ] names by doubling them if they are used as identifiers.
-        # However, it's easier to just strip them or replace them for this application.
         return str(name).replace('[', '').replace(']', '').replace('"', '')
 
     def _initialize_db(self):
@@ -69,8 +67,6 @@ class DatabaseManager:
         for k, v in data_dict.items():
             # Rename 'id' to 'external_id' to avoid conflict with SQLite PRIMARY KEY
             new_key = "external_id" if k.lower() == "id" else k
-            # Sanitize key for SQL
-            new_key = self._sanitize_sql_name(new_key)
             # Handle NaN values
             if isinstance(v, float) and pd.isna(v):
                 sanitized_data[new_key] = ""
@@ -97,29 +93,24 @@ class DatabaseManager:
 
     def add_interaction(self, lead_id, data_dict):
         """Logs a new interaction for a lead with support for custom fields."""
-        sanitized_data = {}
-        for k, v in data_dict.items():
-            new_key = self._sanitize_sql_name(k)
-            sanitized_data[new_key] = v
+        if "contact_date" not in data_dict:
+            data_dict["contact_date"] = datetime.now().strftime("%Y-%m-%d")
+        if "contact_time" not in data_dict:
+            data_dict["contact_time"] = datetime.now().strftime("%H:%M:%S")
 
-        if "contact_date" not in sanitized_data:
-            sanitized_data["contact_date"] = datetime.now().strftime("%Y-%m-%d")
-        if "contact_time" not in sanitized_data:
-            sanitized_data["contact_time"] = datetime.now().strftime("%H:%M:%S")
-
-        sanitized_data["lead_id"] = lead_id
+        data_dict["lead_id"] = lead_id
 
         # Ensure all columns exist in 'interactions'
-        for key in sanitized_data.keys():
+        for key in data_dict.keys():
             self.add_column("interactions", key)
 
-        keys = list(sanitized_data.keys())
+        keys = list(data_dict.keys())
         placeholders = ", ".join(["?"] * len(keys))
         columns = ", ".join([f"[{k}]" for k in keys])
 
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(f"INSERT INTO interactions ({columns}) VALUES ({placeholders})", list(sanitized_data.values()))
+            cursor.execute(f"INSERT INTO interactions ({columns}) VALUES ({placeholders})", list(data_dict.values()))
             conn.commit()
             return cursor.lastrowid
 
@@ -154,11 +145,8 @@ class DatabaseManager:
             cursor = conn.cursor()
 
             if search_term:
-                # Get column names to search across all of them
                 cursor.execute("PRAGMA table_info(leads)")
                 columns = [info[1] for info in cursor.fetchall()]
-
-                # Construct dynamic WHERE clause with OR for each column
                 conditions = " OR ".join([f"[{col}] LIKE ?" for col in columns])
                 query = f"SELECT * FROM leads WHERE {conditions} ORDER BY id DESC"
                 params = [f"%{search_term}%"] * len(columns)

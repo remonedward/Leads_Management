@@ -1,57 +1,51 @@
 # Auto Leads - Leads Management System
 
-A desktop application for managing leads and interactions, built with Python and PyQt5.
+نظام مكتبي لإدارة العملاء والتفاعلات، مبني باستخدام Python و PyQt5.
 
-## Features
+## المميزات
 
-- **Dashboard**: Overview of your leads and database status.
-- **Leads Management**:
-    - Import leads from CSV files.
-    - Manually add leads with any number of custom fields.
-    - Inline editing of lead data in a table.
-    - Automatic handling of 'id' conflicts from external CSVs.
-- **Interaction Tracking**:
-    - Log interactions (e.g., calls, emails) for each lead.
-    - Store custom results and detailed notes.
-- **Reports & Export**:
-    - Filter interactions by date.
-    - Export interaction reports to Excel.
-- **Data Explorer**:
-    - View and edit all database tables directly.
-    - Add new custom fields (columns) to tables dynamically.
+- **لوحة التحكم (Dashboard)**: نظرة عامة على عدد العملاء وحالة قاعدة البيانات.
+- **إدارة العملاء**:
+    - استيراد العملاء من ملفات CSV.
+    - إضافة عملاء يدوياً مع دعم الحقول المخصصة.
+    - تحرير البيانات مباشرة داخل الجدول.
+- **تتبع التفاعلات**:
+    - تسجيل المكالمات والرسائل لكل عميل.
+    - إضافة ملاحظات ونتائج مخصصة.
+- **البحث المتقدم**:
+    - شريط بحث ذكي يبحث في كافة الحقول من جهة قاعدة البيانات لضمان السرعة.
+- **التقارير والتصدير**:
+    - فلترة التفاعلات حسب التاريخ.
+    - تصدير التقارير إلى ملفات Excel.
+- **مستكشف البيانات**:
+    - عرض وتعديل جداول قاعدة البيانات مباشرة.
 
-## Installation
+## التثبيت
 
-1. Clone the repository:
+1. قم بتحميل المشروع:
    ```bash
    git clone https://github.com/your-username/Leads_Management.git
    cd Leads_Management
    ```
 
-2. Install the required dependencies:
+2. تثبيت المكتبات اللازمة:
    ```bash
    pip install -r requirements.txt
    ```
 
-## Usage
+## الاستخدام
 
-Run the application:
+تشغيل التطبيق:
 ```bash
 python main_window.py
 ```
 
-### Tips
-- **CSV Import**: When importing a CSV, columns are automatically mapped. If the CSV has an `id` column, it will be renamed to `external_id` to prevent conflict with the system's internal ID.
-- **Inline Editing**: Double-click any cell in the leads table or data explorer to edit it. Changes are saved automatically to the database.
-- **Custom Fields**: You can add new fields to your leads or interactions through the 'Data Explorer' tab using the 'Add New Field' button.
+## المعمارية
 
-## Architecture
+- `main_window.py`: يحتوي على منطق الواجهة الرسومية.
+- `db_manager.py`: يتعامل مع كافة عمليات قاعدة البيانات SQLite.
+- `style.py`: يحتوي على تنسيقات الواجهة (QSS).
 
-- `main_window.py`: The main GUI application logic.
-- `db_manager.py`: Handles all database operations using SQLite.
-- `style.py`: Contains the custom QSS (Qt Style Sheets) for a modern UI.
-- `leads_database.db`: The SQLite database file (created automatically on first run).
+## المؤلف
 
-## Author
-
-Developed by >>REMO_OX<<
+تم التطوير بواسطة >>REMO_OX<<
